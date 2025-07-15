@@ -1,0 +1,668 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный текст и задания 📚</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .correct { color: #10b981; }
+        .incorrect { color: #ef4444; }
+        .tab-content { display: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
+        .tab-content.active { display: block; opacity: 1; }
+        .tab-button.active { background-color: #38bdf8; color: #fff; }
+        input[type="text"] { border: 1px solid #d1d5db; padding: 4px; border-radius: 4px; width: 120px; display: inline-block; }
+        textarea { width: 100%; resize: vertical; border: 1px solid #d1d5db; padding: 4px; border-radius: 4px; }
+        #text-content p { text-indent: 1.5em; }
+        .feedback { opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease; }
+        .feedback:not(.hidden) { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body class="bg-sky-100 text-gray-800 p-6">
+    <div class="max-w-4xl mx-auto bg-sky-50 p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold mb-4">Radio Frequency Surprise 📻</h1>
+        
+        <!-- Текст -->
+        <div class="mb-6">
+            <button onclick="toggleText()" class="mb-2 bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700">Показать/Скрыть текст 📖</button>
+            <div id="text-content" class="text-gray-700">
+                <p>Last Saturday was a very busy day for my family because our cousin Leo was coming to visit for the holidays. We wanted everything to be perfect for his arrival.</p>
+                <p>While I was tidying my bedroom, my older brother Tom was looking after our little sister in the garden. I found my old radio on the shelf and decided to repair it because Leo loves listening to music. I was checking the batteries when my dad came into the room. He sent me to the local shop to fetch some bread and milk for dinner.</p>
+                <p>Later that afternoon, everything was ready. While my mum was making sure the dinner was cooking in the oven, my dad was checking the time for the train. We all got into the car to go to the train station to meet our cousin. We were waiting on the platform when the train finally arrived. It was wonderful to see Leo again!</p>
+                <p>While we were driving back home, Leo was telling us all his news, and we were listening carefully. When we arrived, I helped him take his bags to the guest room. A little later, we all sat down for dinner. We were eating my mum's delicious pasta when Leo excitedly turned on the radio I had repaired. He was hoping to hear his favourite rock music, but instead a loud voice shouted: "Calling taxi number seven, go to Central Street!" My "repaired" radio was picking up the local taxi frequency! Leo looked at the radio, then at me, and we all burst out laughing.</p>
+            </div>
+        </div>
+        
+        <!-- Вкладки для заданий -->
+        <div class="mb-6">
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button class="tab-button active px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 text-white" onclick="openTab('multiple-choice')">Multiple Choice ❓</button>
+                <button class="tab-button px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 text-white" onclick="openTab('open-brackets')">Open the Brackets ✍️</button>
+                <button class="tab-button px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 text-white" onclick="openTab('error-correction')">Error Correction 🛠️</button>
+                <button class="tab-button px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 text-white" onclick="openTab('true-false')">True/False ✅</button>
+                <button class="tab-button px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 text-white" onclick="openTab('fill-gaps')">Fill in the Gaps 📝</button>
+                <button class="tab-button px-4 py-2 bg-sky-600 rounded hover:bg-sky-700 text-white" onclick="openTab('discussion')">Discussion Questions 💬</button>
+            </div>
+            
+            <!-- Multiple Choice -->
+            <div id="multiple-choice" class="tab-content active">
+                <h2 class="text-xl font-semibold mb-4">Multiple Choice ❓</h2>
+                <div id="mc-questions">
+                    <div class="question mb-4">
+                        <p class="font-medium">1. Last Saturday _____ a very busy day for my family.</p>
+                        <label><input type="radio" name="mc1" value="was"> was</label><br>
+                        <label><input type="radio" name="mc1" value="were"> were</label><br>
+                        <label><input type="radio" name="mc1" value="is"> is</label><br>
+                        <label><input type="radio" name="mc1" value="are"> are</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">2. While I was tidying my bedroom, my brother _____ our little sister.</p>
+                        <label><input type="radio" name="mc2" value="looked after"> looked after</label><br>
+                        <label><input type="radio" name="mc2" value="was looking after"> was looking after</label><br>
+                        <label><input type="radio" name="mc2" value="looks after"> looks after</label><br>
+                        <label><input type="radio" name="mc2" value="is looking after"> is looking after</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">3. I _____ the batteries when my dad came into the room.</p>
+                        <label><input type="radio" name="mc3" value="checked"> checked</label><br>
+                        <label><input type="radio" name="mc3" value="was checking"> was checking</label><br>
+                        <label><input type="radio" name="mc3" value="check"> check</label><br>
+                        <label><input type="radio" name="mc3" value="am checking"> am checking</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">4. We _____ on the platform when the train finally arrived.</p>
+                        <label><input type="radio" name="mc4" value="waited"> waited</label><br>
+                        <label><input type="radio" name="mc4" value="were waiting"> were waiting</label><br>
+                        <label><input type="radio" name="mc4" value="wait"> wait</label><br>
+                        <label><input type="radio" name="mc4" value="are waiting"> are waiting</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">5. While we were driving back home, Leo _____ us all his news.</p>
+                        <label><input type="radio" name="mc5" value="told"> told</label><br>
+                        <label><input type="radio" name="mc5" value="was telling"> was telling</label><br>
+                        <label><input type="radio" name="mc5" value="tells"> tells</label><br>
+                        <label><input type="radio" name="mc5" value="is telling"> is telling</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">6. We were eating dinner when Leo _____ the radio.</p>
+                        <label><input type="radio" name="mc6" value="was turning on"> was turning on</label><br>
+                        <label><input type="radio" name="mc6" value="turned on"> turned on</label><br>
+                        <label><input type="radio" name="mc6" value="turns on"> turns on</label><br>
+                        <label><input type="radio" name="mc6" value="is turning on"> is turning on</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">7. He _____ to hear his favourite rock music.</p>
+                        <label><input type="radio" name="mc7" value="hoped"> hoped</label><br>
+                        <label><input type="radio" name="mc7" value="was hoping"> was hoping</label><br>
+                        <label><input type="radio" name="mc7" value="hopes"> hopes</label><br>
+                        <label><input type="radio" name="mc7" value="is hoping"> is hoping</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">8. My "repaired" radio _____ the local taxi frequency!</p>
+                        <label><input type="radio" name="mc8" value="picked up"> picked up</label><br>
+                        <label><input type="radio" name="mc8" value="was picking up"> was picking up</label><br>
+                        <label><input type="radio" name="mc8" value="picks up"> picks up</label><br>
+                        <label><input type="radio" name="mc8" value="is picking up"> is picking up</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="checkMCAnswers()" class="mt-4 bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700">Проверить ответы 🔍</button>
+                    <button onclick="resetMCAnswers()" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Сбросить ответы 🔄</button>
+                </div>
+                <p id="mc-score" class="mt-2"></p>
+            </div>
+            
+            <!-- Open the Brackets -->
+            <div id="open-brackets" class="tab-content">
+                <h2 class="text-xl font-semibold mb-4">Open the Brackets ✍️</h2>
+                <div id="ob-questions">
+                    <div class="question mb-4">
+                        <p class="font-medium">1. While I <input type="text" class="ob-input" data-answer="was tidying"> (tidy) my bedroom, my brother <input type="text" class="ob-input" data-answer="was looking after"> (look after) our little sister.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">2. I <input type="text" class="ob-input" data-answer="was checking"> (check) the batteries when my dad <input type="text" class="ob-input" data-answer="came"> (come) into the room.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">3. We <input type="text" class="ob-input" data-answer="were waiting"> (wait) on the platform when the train <input type="text" class="ob-input" data-answer="arrived"> (arrive).</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">4. While we <input type="text" class="ob-input" data-answer="were driving"> (drive) back home, Leo <input type="text" class="ob-input" data-answer="was telling"> (tell) us all his news.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">5. We <input type="text" class="ob-input" data-answer="were eating"> (eat) dinner when Leo <input type="text" class="ob-input" data-answer="turned on"> (turn on) the radio.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">6. He <input type="text" class="ob-input" data-answer="was hoping"> (hope) to hear music, but instead a voice <input type="text" class="ob-input" data-answer="shouted"> (shout).</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">7. Last Saturday <input type="text" class="ob-input" data-answer="was"> (be) a very busy day because Leo <input type="text" class="ob-input" data-answer="was coming"> (come) to visit.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">8. My mum <input type="text" class="ob-input" data-answer="was making sure"> (make sure) the dinner <input type="text" class="ob-input" data-answer="was cooking"> (cook) in the oven.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="checkOBAnswers()" class="mt-4 bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700">Проверить ответы 🔍</button>
+                    <button onclick="resetOBAnswers()" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Сбросить ответы 🔄</button>
+                </div>
+                <p id="ob-score" class="mt-2"></p>
+            </div>
+            
+            <!-- Error Correction -->
+            <div id="error-correction" class="tab-content">
+                <h2 class="text-xl font-semibold mb-4">Error Correction 🛠️</h2>
+                <div id="ec-questions">
+                    <div class="question mb-4">
+                        <p class="font-medium">1. While I was tidy my bedroom, Tom was looking after our sister.</p>
+                        <input type="text" class="ec-input w-full" data-answer="While I was tidying my bedroom, Tom was looking after our sister.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">2. I was checking the batteries when my dad was coming into the room.</p>
+                        <input type="text" class="ec-input w-full" data-answer="I was checking the batteries when my dad came into the room.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">3. We were waited on the platform when the train arrived.</p>
+                        <input type="text" class="ec-input w-full" data-answer="We were waiting on the platform when the train arrived.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">4. While we drove back home, Leo was telling us his news.</p>
+                        <input type="text" class="ec-input w-full" data-answer="While we were driving back home, Leo was telling us his news.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">5. We ate dinner when Leo was turning on the radio.</p>
+                        <input type="text" class="ec-input w-full" data-answer="We were eating dinner when Leo turned on the radio.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">6. He hoped to hear music, but a voice was shouting instead.</p>
+                        <input type="text" class="ec-input w-full" data-answer="He hoped to hear music, but a voice shouted instead.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">7. Last Saturday were a very busy day for my family.</p>
+                        <input type="text" class="ec-input w-full" data-answer="Last Saturday was a very busy day for my family.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">8. My dad was sent me to the local shop to fetch some bread.</p>
+                        <input type="text" class="ec-input w-full" data-answer="My dad sent me to the local shop to fetch some bread.">
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="checkECAnswers()" class="mt-4 bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700">Проверить ответы 🔍</button>
+                    <button onclick="resetECAnswers()" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Сбросить ответы 🔄</button>
+                </div>
+                <p id="ec-score" class="mt-2"></p>
+            </div>
+            
+            <!-- True/False -->
+            <div id="true-false" class="tab-content">
+                <h2 class="text-xl font-semibold mb-4">True/False ✅</h2>
+                <div id="tf-questions">
+                    <div class="question mb-4">
+                        <p class="font-medium">1. Cousin Leo was coming to visit for Christmas.</p>
+                        <label><input type="radio" name="tf1" value="False"> False</label><br>
+                        <label><input type="radio" name="tf1" value="True"> True</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">2. The narrator was cleaning his bedroom while his brother was in the garden.</p>
+                        <label><input type="radio" name="tf2" value="True"> True</label><br>
+                        <label><input type="radio" name="tf2" value="False"> False</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">3. The narrator found an old radio in the kitchen.</p>
+                        <label><input type="radio" name="tf3" value="False"> False</label><br>
+                        <label><input type="radio" name="tf3" value="True"> True</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">4. Dad asked the narrator to buy bread and milk.</p>
+                        <label><input type="radio" name="tf4" value="True"> True</label><br>
+                        <label><input type="radio" name="tf4" value="False"> False</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">5. They went to the bus station to meet Leo.</p>
+                        <label><input type="radio" name="tf5" value="False"> False</label><br>
+                        <label><input type="radio" name="tf5" value="True"> True</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">6. The train was late.</p>
+                        <label><input type="radio" name="tf6" value="False"> False</label><br>
+                        <label><input type="radio" name="tf6" value="True"> True</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">7. Leo helped carry his own bags to the guest room.</p>
+                        <label><input type="radio" name="tf7" value="False"> False</label><br>
+                        <label><input type="radio" name="tf7" value="True"> True</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">8. The repaired radio worked perfectly and played rock music.</p>
+                        <label><input type="radio" name="tf8" value="False"> False</label><br>
+                        <label><input type="radio" name="tf8" value="True"> True</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">9. The radio was picking up taxi communications.</p>
+                        <label><input type="radio" name="tf9" value="True"> True</label><br>
+                        <label><input type="radio" name="tf9" value="False"> False</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">10. Everyone was upset about the radio malfunction.</p>
+                        <label><input type="radio" name="tf10" value="False"> False</label><br>
+                        <label><input type="radio" name="tf10" value="True"> True</label><br>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="checkTFAnswers()" class="mt-4 bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700">Проверить ответы 🔍</button>
+                    <button onclick="resetTFAnswers()" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Сбросить ответы 🔄</button>
+                </div>
+                <p id="tf-score" class="mt-2"></p>
+            </div>
+            
+            <!-- Fill in the Gaps -->
+            <div id="fill-gaps" class="tab-content">
+                <h2 class="text-xl font-semibold mb-4">Fill in the Gaps 📝</h2>
+                <div id="fg-questions">
+                    <div class="question mb-4">
+                        <p class="font-medium">1. Last Saturday was busy because cousin <input type="text" class="fg-input w-24" data-answer="Leo"> was coming to visit for the <input type="text" class="fg-input w-24" data-answer="holidays">.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">2. While the narrator was tidying his bedroom, Tom was looking after their <input type="text" class="fg-input w-24" data-answer="little sister"> in the <input type="text" class="fg-input w-24" data-answer="garden">.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">3. The narrator decided to repair the old <input type="text" class="fg-input w-24" data-answer="radio"> because Leo loves listening to <input type="text" class="fg-input w-24" data-answer="music">.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">4. Dad sent the narrator to the local <input type="text" class="fg-input w-24" data-answer="shop"> to fetch some <input type="text" class="fg-input w-24" data-answer="bread"> and <input type="text" class="fg-input w-24" data-answer="milk">.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">5. While mum was making sure the dinner was cooking in the <input type="text" class="fg-input w-24" data-answer="oven">, dad was checking the time for the <input type="text" class="fg-input w-24" data-answer="train">.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">6. They were waiting on the <input type="text" class="fg-input w-24" data-answer="platform"> when the train finally arrived.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">7. During the drive home, Leo was telling them all his <input type="text" class="fg-input w-24" data-answer="news">.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">8. They were eating mum's delicious <input type="text" class="fg-input w-24" data-answer="pasta"> when Leo turned on the radio.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">9. Instead of rock music, they heard: "Calling taxi number <input type="text" class="fg-input w-24" data-answer="seven">, go to <input type="text" class="fg-input w-24" data-answer="Central Street">!"</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">10. The radio was picking up the local <input type="text" class="fg-input w-24" data-answer="taxi"> frequency.</p>
+                        <p class="feedback hidden mt-2"></p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="checkFGAnswers()" class="mt-4 bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700">Проверить ответы 🔍</button>
+                    <button onclick="resetFGAnswers()" class="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Сбросить ответы 🔄</button>
+                </div>
+                <p id="fg-score" class="mt-2"></p>
+            </div>
+            
+            <!-- Discussion Questions -->
+            <div id="discussion" class="tab-content">
+                <h2 class="text-xl font-semibold mb-4">Discussion Questions 💬</h2>
+                <div id="dq-questions">
+                    <div class="question mb-4">
+                        <p class="font-medium">1. Why was last Saturday a busy day for the family?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq1"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">2. What was each family member doing while preparing for Leo's visit?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq2"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">3. Why did the narrator decide to repair the old radio?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq3"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">4. What did the father ask the narrator to do?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq4"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">5. How did the family travel to meet Leo?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq5"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">6. What happened during the car ride back home?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq6"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">7. What did Leo expect to hear when he turned on the radio?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq7"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">8. What actually happened when the radio was turned on?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq8"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">9. How did everyone react to the radio malfunction?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq9"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">10. What does this story tell us about family relationships?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq10"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">11. Have you ever had a similar experience with broken electronics? Describe it.</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq11"></textarea>
+                    </div>
+                    <div class="question mb-4">
+                        <p class="font-medium">12. What do you think makes a family visit special?</p>
+                        <textarea class="dq-input w-full h-20 p-2 border rounded" data-id="dq12"></textarea>
+                    </div>
+                </div>
+                <button onclick="saveDQAnswers()" class="mt-4 bg-sky-600 text-white px-4 py-2 rounded hover:bg-sky-700">Сохранить ответы 💾</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleText() {
+            const textContent = document.getElementById('text-content');
+            textContent.classList.toggle('hidden');
+        }
+
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+                tab.style.opacity = '0';
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            const tab = document.getElementById(tabId);
+            if (tab) {
+                tab.classList.add('active');
+                setTimeout(() => { tab.style.opacity = '1'; }, 10);
+            }
+            const button = document.querySelector(`button[onclick="openTab('${tabId}')"]`);
+            if (button) button.classList.add('active');
+        }
+
+        function checkMCAnswers() {
+            const questions = document.querySelectorAll('#multiple-choice .question');
+            const answers = ['was', 'was looking after', 'was checking', 'were waiting', 'was telling', 'turned on', 'was hoping', 'was picking up'];
+            let correctCount = 0;
+            questions.forEach((question, index) => {
+                const radios = question.querySelectorAll('input[type="radio"]');
+                const feedback = question.querySelector('.feedback');
+                let selectedValue;
+                radios.forEach(radio => {
+                    if (radio.checked) selectedValue = radio.value;
+                });
+                feedback.classList.remove('hidden');
+                if (selectedValue === answers[index]) {
+                    feedback.textContent = 'Правильно! ✅';
+                    feedback.classList.add('correct');
+                    feedback.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    feedback.textContent = 'Неправильно. Попробуйте еще раз! ❌';
+                    feedback.classList.add('incorrect');
+                    feedback.classList.remove('correct');
+                }
+            });
+            document.getElementById('mc-score').textContent = `Результат: ${correctCount} из ${answers.length} (${Math.round((correctCount / answers.length) * 100)}%) 🎯`;
+        }
+
+        function resetMCAnswers() {
+            const questions = document.querySelectorAll('#multiple-choice .question');
+            questions.forEach(question => {
+                const radios = question.querySelectorAll('input[type="radio"]');
+                const feedback = question.querySelector('.feedback');
+                radios.forEach(radio => radio.checked = false);
+                feedback.classList.add('hidden');
+                feedback.textContent = '';
+                feedback.classList.remove('correct', 'incorrect');
+            });
+            document.getElementById('mc-score').textContent = '';
+        }
+
+        function checkOBAnswers() {
+            const inputs = document.querySelectorAll('#open-brackets .ob-input');
+            const answers = ['was tidying', 'was looking after', 'was checking', 'came', 'were waiting', 'arrived', 'were driving', 'was telling', 'were eating', 'turned on', 'was hoping', 'shouted', 'was', 'was coming', 'was making sure', 'was cooking'];
+            let correctCount = 0;
+            inputs.forEach((input, index) => {
+                const feedback = input.parentElement.nextElementSibling;
+                feedback.classList.remove('hidden');
+                if (input.value.trim().toLowerCase() === answers[index].toLowerCase()) {
+                    feedback.textContent = 'Правильно! ✅';
+                    feedback.classList.add('correct');
+                    feedback.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    feedback.textContent = 'Неправильно. Попробуйте еще раз! ❌';
+                    feedback.classList.add('incorrect');
+                    feedback.classList.remove('correct');
+                }
+            });
+            document.getElementById('ob-score').textContent = `Результат: ${correctCount} из ${answers.length} (${Math.round((correctCount / answers.length) * 100)}%) 🎯`;
+        }
+
+        function resetOBAnswers() {
+            const inputs = document.querySelectorAll('#open-brackets .ob-input');
+            inputs.forEach(input => {
+                const feedback = input.parentElement.nextElementSibling;
+                input.value = '';
+                feedback.classList.add('hidden');
+                feedback.textContent = '';
+                feedback.classList.remove('correct', 'incorrect');
+            });
+            document.getElementById('ob-score').textContent = '';
+        }
+
+        function checkECAnswers() {
+            const inputs = document.querySelectorAll('#error-correction .ec-input');
+            const answers = [
+                'While I was tidying my bedroom, Tom was looking after our sister.',
+                'I was checking the batteries when my dad came into the room.',
+                'We were waiting on the platform when the train arrived.',
+                'While we were driving back home, Leo was telling us his news.',
+                'We were eating dinner when Leo turned on the radio.',
+                'He hoped to hear music, but a voice shouted instead.',
+                'Last Saturday was a very busy day for my family.',
+                'My dad sent me to the local shop to fetch some bread.'
+            ];
+            let correctCount = 0;
+            inputs.forEach((input, index) => {
+                const feedback = input.nextElementSibling;
+                feedback.classList.remove('hidden');
+                if (input.value.trim() === answers[index]) {
+                    feedback.textContent = 'Правильно! ✅';
+                    feedback.classList.add('correct');
+                    feedback.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    feedback.textContent = 'Неправильно. Попробуйте еще раз! ❌';
+                    feedback.classList.add('incorrect');
+                    feedback.classList.remove('correct');
+                }
+            });
+            document.getElementById('ec-score').textContent = `Результат: ${correctCount} из ${answers.length} (${Math.round((correctCount / answers.length) * 100)}%) 🎯`;
+        }
+
+        function resetECAnswers() {
+            const inputs = document.querySelectorAll('#error-correction .ec-input');
+            inputs.forEach(input => {
+                const feedback = input.nextElementSibling;
+                input.value = '';
+                feedback.classList.add('hidden');
+                feedback.textContent = '';
+                feedback.classList.remove('correct', 'incorrect');
+            });
+            document.getElementById('ec-score').textContent = '';
+        }
+
+        function checkTFAnswers() {
+            const questions = document.querySelectorAll('#true-false .question');
+            const answers = ['False', 'True', 'False', 'True', 'False', 'False', 'False', 'False', 'True', 'False'];
+            let correctCount = 0;
+            questions.forEach((question, index) => {
+                const radios = question.querySelectorAll('input[type="radio"]');
+                const feedback = question.querySelector('.feedback');
+                let selectedValue;
+                radios.forEach(radio => {
+                    if (radio.checked) selectedValue = radio.value;
+                });
+                feedback.classList.remove('hidden');
+                if (selectedValue === answers[index]) {
+                    feedback.textContent = 'Правильно! ✅';
+                    feedback.classList.add('correct');
+                    feedback.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    feedback.textContent = 'Неправильно. Попробуйте еще раз! ❌';
+                    feedback.classList.add('incorrect');
+                    feedback.classList.remove('correct');
+                }
+            });
+            document.getElementById('tf-score').textContent = `Результат: ${correctCount} из ${answers.length} (${Math.round((correctCount / answers.length) * 100)}%) 🎯`;
+        }
+
+        function resetTFAnswers() {
+            const questions = document.querySelectorAll('#true-false .question');
+            questions.forEach(question => {
+                const radios = question.querySelectorAll('input[type="radio"]');
+                const feedback = question.querySelector('.feedback');
+                radios.forEach(radio => radio.checked = false);
+                feedback.classList.add('hidden');
+                feedback.textContent = '';
+                feedback.classList.remove('correct', 'incorrect');
+            });
+            document.getElementById('tf-score').textContent = '';
+        }
+
+        function checkFGAnswers() {
+            const inputs = document.querySelectorAll('#fill-gaps .fg-input');
+            const answers = ['Leo', 'holidays', 'little sister', 'garden', 'radio', 'music', 'shop', 'bread', 'milk', 'oven', 'train', 'platform', 'news', 'pasta', 'seven', 'Central Street', 'taxi'];
+            let correctCount = 0;
+            inputs.forEach((input, index) => {
+                const feedback = input.parentElement.nextElementSibling;
+                feedback.classList.remove('hidden');
+                if (input.value.trim().toLowerCase() === answers[index].toLowerCase()) {
+                    feedback.textContent = 'Правильно! ✅';
+                    feedback.classList.add('correct');
+                    feedback.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    feedback.textContent = 'Неправильно. Попробуйте еще раз! ❌';
+                    feedback.classList.add('incorrect');
+                    feedback.classList.remove('correct');
+                }
+            });
+            document.getElementById('fg-score').textContent = `Результат: ${correctCount} из ${answers.length} (${Math.round((correctCount / answers.length) * 100)}%) 🎯`;
+        }
+
+        function resetFGAnswers() {
+            const inputs = document.querySelectorAll('#fill-gaps .fg-input');
+            inputs.forEach(input => {
+                const feedback = input.parentElement.nextElementSibling;
+                input.value = '';
+                feedback.classList.add('hidden');
+                feedback.textContent = '';
+                feedback.classList.remove('correct', 'incorrect');
+            });
+            document.getElementById('fg-score').textContent = '';
+        }
+
+        function saveDQAnswers() {
+            const inputs = document.querySelectorAll('#discussion .dq-input');
+            inputs.forEach(input => {
+                const id = input.dataset.id;
+                localStorage.setItem(id, input.value);
+            });
+            alert('Ответы сохранены! 💾');
+        }
+
+        // Загрузка сохранённых ответов для Discussion Questions
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputs = document.querySelectorAll('#discussion .dq-input');
+            inputs.forEach(input => {
+                const id = input.dataset.id;
+                const saved = localStorage.getItem(id);
+                if (saved) input.value = saved;
+            });
+        });
+    </script>
+</body>
+</html>
